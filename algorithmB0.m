@@ -1,5 +1,7 @@
 function []=algorithmB0()
-load 800input.mat;
+for iter=12:22
+     clearvars -except iter;
+load 200input.mat;
 global history_list_1;
 global num_history_list_1;
 load one2one0.mat;
@@ -45,8 +47,23 @@ final_pre=final_0;
 fzq=zeros(com_parameter.L,m);
 city=zeros(1,m);
 global max_mgot;
+global number_ini;
+global number_max;
+number_ini=0;
+number_max=0;
 max_mgot=0;
 num_m=zeros(1,100);
+
+for i=1:com_parameter.L
+    for j=1:m
+        num_oft=num_serving_T(j);
+        xuhao_coft=floor(rand()*num_oft+1);
+        list_serving_code_t=list_serving_codeold{j,1};
+        city(j)=list_serving_code_t(1,xuhao_coft);
+    end
+    fzq(i,:)=city;
+end
+
 for i=1:com_parameter.L
     flag_chushi=0;
     while(flag_chushi<1)
@@ -55,7 +72,7 @@ for i=1:com_parameter.L
             xuhao_coft=floor(rand()*num_oft+1);
             list_serving_code_t=list_serving_codeold{j,1};
             city(j)=list_serving_code_t(1,xuhao_coft);
-        end
+         end
         [~,~,~,flag_chushi,~,num_m(i)]=func1(m,city,RTOM,Mu,n,TOT,VOC,COEC,COET,final_pre,com_parameter);
         if(flag_chushi~=0)
             if(num_m(i)>max_mgot)
@@ -67,6 +84,8 @@ for i=1:com_parameter.L
     end
     fzq(i,:)=city;
 end
+number_m_inigot=max_mgot;
+number_ini=num_cost;
 num1=zeros(1,1);
 rate_deltae=100*T*com_parameter.K.^(round(num_iter_1/2));
 d_len1=1;
@@ -76,35 +95,32 @@ one_hist=cell(1,1);
 two_hist=zeros(1,1);
 three_hist=zeros(1,1);
 std_hist=zeros(1,m);
+four_hist=zeros(1,1);
+five_hist=zeros(1,1);
+%load matlab.mat;
+tic;
 while (T > 0.001|| cout_dead<50)
     one_hist{number_iter,1}=fzq;
     for i=1:m
         std_hist(number_iter,i)=std(one_hist{number_iter,1}(:,i));
     end
+    std_hist(number_iter,m+1)=mean(std_hist(number_iter,1:m));
     if(d_len1>=0)
         [nzq,len(number_iter),fzq_best,num_m2(number_iter),two_hist(number_iter),three_hist(number_iter)]=got_pinggu(fzq,m,Mu,n,TOT,RTOM,VOC,COEC,COET,final_pre,com_parameter);
-        if number_iter>1
-            d_len1=(len(number_iter)-len(number_iter-1))/len(number_iter-1);
-            if d_len1<0
-                d_len1=1e4;
-            end
-        else
-            d_len1=1e4;
-        end
-        fzq=generate_newzq(nzq,fzq_best,m,list_serving_codeold,list_serving_code,num_serving_T,rate_deltae,T,Mu,n,TOT,RTOM,VOC,COEC,COET,final_pre,com_parameter,num_m2(number_iter));
+%         if number_iter>1
+%             d_len1=(len(number_iter)-len(number_iter-1))/len(number_iter-1);
+%             if d_len1<0
+%                 d_len1=1e4;
+%             end
+%         else
+%             d_len1=1e4;
+%         end
+        [fzq,four_hist(number_iter),five_hist(number_iter)]=generate_newzq(nzq,fzq_best,m,list_serving_codeold,list_serving_code,num_serving_T,rate_deltae,T,Mu,n,TOT,RTOM,VOC,COEC,COET,final_pre,com_parameter,num_m2(number_iter));
     end
     TT(number_iter)=T;
     T=T*com_parameter.K;
     if(number_iter>1)
-        if(num_m2(number_iter)>num_m2(number_iter-1))
-            T=100;
-            disp(num_m2(number_iter));
-        end
-        if(num_m2(number_iter)==10)
-            a=1;
-        end
-        cc=(len(number_iter-1)-len(number_iter))/len(number_iter-1);
-        if(cc==0)
+        if(len(number_iter-1)==len(number_iter))
             cout_dead=cout_dead+1;
         else
             cout_dead=0;
@@ -126,21 +142,27 @@ city=fzq_best;
 
 toc;
 ttime=toc-tic;
-
+eval(['save(''200(0)b0_result',num2str(iter),'.mat'');'])
+end
 
 flag=1;
 
 function [nzq,maxlen,fzq_best,num_mlast,two_hist,three_hist]=got_pinggu(fzq,m,Mu,n,TOT,RTOM,VOC,COEC,COET,final_pre,com_parameter)
 
 global max_mgot;
+global num_cost;
+global number_max;
 nzq(1,:)=fzq(1,:);
-for i=1:com_parameter.L
+for i=1:size(fzq,1)
     city=fzq(i,:);
     [lenzq(i),~,~,flagzq(i),final,num_m(i)]=func1(m,city,RTOM,Mu,n,TOT,VOC,COEC,COET,final_pre,com_parameter);
-    if(flagzq(i)==1 && num_m(i)==10)
-        disp(10);
-        toc;
-        ttime=toc-tic;
+    if(flagzq(i)==1 && num_m(i)>max_mgot)
+        max_mgot=num_m(i);
+        number_max=num_cost;
+        disp('max:');
+        disp(max_mgot);
+        disp('number_max:');
+        disp(num_cost);
     end
 end
 two_hist=0;
@@ -148,7 +170,7 @@ maxlen=0;
 minlen=1e10;
 num_youxiao=0;
 num_max=0;
-for i=1:com_parameter.L
+for i=1:size(fzq,1)
     if(flagzq(i)~=0)
         num_youxiao=num_youxiao+1;
         two_hist=two_hist+lenzq(i);
@@ -157,9 +179,6 @@ for i=1:com_parameter.L
         end
         if(minlen>lenzq(i))
             minlen=lenzq(i);
-        end
-        if(num_m(i)>max_mgot)
-             max_mgot=num_m(i);
         end
         if(num_m(i)>num_max)
              num_max=num_m(i);
@@ -201,7 +220,7 @@ end
 
 nn=0;
 if(maxlen==minlen)
-    for i=1:com_parameter.L
+    for i=1:size(fzq,1)
         if(flagzq(i)~=0)
             if(rand()>0.5)
                 nn=nn+1;
@@ -210,7 +229,7 @@ if(maxlen==minlen)
         end
     end
 else
-    for i=1:com_parameter.L
+    for i=1:size(fzq,1)
         if(flagzq(i)~=0)
             if(fitness(i,1)>=rand())
                 nn=nn+1;
@@ -228,50 +247,86 @@ end
 return
 
 %generate new population (GA)
-function fzq=generate_newzq(nzq,fzq_best,m,list_serving_codeold,list_serving_code,num_serving_T,rate_deltae,T,Mu,n,TOT,RTOM,VOC,COEC,COET,final_pre,com_parameter,num_m)
+function [fzq,four_hist,five_hist]=generate_newzq(nzq,fzq_best,m,list_serving_codeold,list_serving_code,num_serving_T,rate_deltae,T,Mu,n,TOT,RTOM,VOC,COEC,COET,final_pre,com_parameter,num_m)
 num_zq=size(nzq,1);
+five_hist=num_zq;
+num_gen=0;
 if(num_zq>1)
-    num_gen=0;
-    while num_zq<com_parameter.L 
-        num_gen=num_gen+1;
-        
-        [baby1,baby2,father1,father2]=generate_newbaby(num_zq,nzq,m,list_serving_codeold,num_serving_T,num_m);
-        city=father1;
-        [len_f1,sumt,sumfuel,flag_f1,final,num_mi]=func1(m,city,RTOM,Mu,n,TOT,VOC,COEC,COET,final_pre,com_parameter);
-        city=baby1;
-        [len_b1,sumt,sumfuel,flag_b1,final,num_mi]=func1(m,city,RTOM,Mu,n,TOT,VOC,COEC,COET,final_pre,com_parameter);
-        delta_e=rate_deltae*(len_f1-len_b1)/len_f1;
-        if (flag_f1==1 && flag_b1==1)
+    num_add=0;
+    for i=1:com_parameter.L
+        [baby1(i,:),baby2(i,:),father1(i,:),father2(i,:)]=generate_newbaby(num_zq,nzq,m,list_serving_codeold,num_serving_T,num_m);
+        city=father1(i,:);
+        [len_f1(i,1),sumt,sumfuel,flag_f1(i,1),final,num_mi]=func1(m,city,RTOM,Mu,n,TOT,VOC,COEC,COET,final_pre,com_parameter);
+        city=baby1(i,:);
+        [len_b1(i,1),sumt,sumfuel,flag_b1(i,1),final,num_mi]=func1(m,city,RTOM,Mu,n,TOT,VOC,COEC,COET,final_pre,com_parameter);
+        city=father2(i,:);
+        [len_f2(i,1),sumt,sumfuel,flag_f2(i,1),final,num_mi]=func1(m,city,RTOM,Mu,n,TOT,VOC,COEC,COET,final_pre,com_parameter);
+        city=baby2(i,:);
+        [len_b2(i,1),sumt,sumfuel,flag_b2(i,1),final,num_mi]=func1(m,city,RTOM,Mu,n,TOT,VOC,COEC,COET,final_pre,com_parameter);
+        delta_e=rate_deltae*(len_f1(i,1)-len_b1(i,1))/len_f1(i,1);
+        if (flag_f1(i,1)==1 && flag_b1(i,1)==1)
             if delta_e<0
-                nzq=[nzq;baby1];
+                nzq=[nzq;baby1(i,:)];
+                len_b1(i,1)=-2;
+                num_add=num_add+1;
+                if(num_add==com_parameter.L-num_zq)
+                    break;
+                end
             else
                 %% update two
-                if (exp(-delta_e/T)>rand() ||num_gen>1000)
-                    nzq=[nzq;baby1];
+                if (exp(-delta_e/T)>rand())
+                    nzq=[nzq;baby1(i,:)];
+                    len_b1(i,1)=-2;
+                    num_add=num_add+1;
+                    if(num_add==com_parameter.L-num_zq)
+                        break;
+                    end
                 end
             end
-        elseif(flag_f1==0)
-            nzq=[nzq;baby1];
+        elseif(flag_f1(i,1)==0)
+            nzq=[nzq;baby1(i,:)];
+            len_b1(i,1)=-2;
+            num_add=num_add+1;
+            if(num_add==com_parameter.L-num_zq)
+                break;
+            end
         end
-        city=father2;
-        [len_f2,sumt,sumfuel,flag_f2,final,num_mi]=func1(m,city,RTOM,Mu,n,TOT,VOC,COEC,COET,final_pre,com_parameter);
-        city=baby2;
-        [len_b2,sumt,sumfuel,flag_b2,final,num_mi]=func1(m,city,RTOM,Mu,n,TOT,VOC,COEC,COET,final_pre,com_parameter);
-        delta_e=rate_deltae*(len_f2-len_b2)/len_f2;
-        if (flag_f2==1 && flag_b2==1)
+        delta_e=rate_deltae*(len_f2(i,1)-len_b2(i,1))/len_f2(i,1);
+        if (flag_f2(i,1)==1 && flag_b2(i,1)==1)
             if delta_e<0
-                nzq=[nzq;baby2];
+                nzq=[nzq;baby2(i,:)];
+                len_b2(i,1)=-2;
+                num_add=num_add+1;
+                if(num_add==com_parameter.L-num_zq)
+                    break;
+                end
             else
-                if (exp(-delta_e/T)>rand()||num_gen>1000)
-                    nzq=[nzq;baby2];
+                if (exp(-delta_e/T)>rand())
+                    nzq=[nzq;baby2(i,:)];
+                    len_b2(i,1)=-2;
+                    num_add=num_add+1;
+                    if(num_add==com_parameter.L-num_zq)
+                        break;
+                    end
                 end
             end
-        elseif(flag_f2==0)
-            nzq=[nzq;baby2];
+        elseif(flag_f2(i,1)==0)
+            nzq=[nzq;baby2(i,:)];
+            len_b2(i,1)=-2;
+            num_add=num_add+1;
+            if(num_add==com_parameter.L-num_zq)
+                break;
+            end
         end
+    end
+    num_zq=size(nzq,1);
+    while(num_zq<com_parameter.L)
+        xuhao_coft=floor(rand*num_zq+1);
+        nzq=[nzq;nzq(xuhao_coft,:)];
         num_zq=size(nzq,1);
     end
 elseif(num_zq>0)
+    a=1;
     for i=2:com_parameter.L
         nzq(i,:)=nzq(1,:);
     end
@@ -287,33 +342,35 @@ else
         nzq(i,:)=city;
     end
 end
-disp(num_gen);
+four_hist=num_gen;
 %% update three
-for i=com_parameter.L/2:com_parameter.L
-    num_0city=0;
-    for j=1:m
-        if(nzq(i,j)==0)
-            num_0city=num_0city+1;
-            city0(num_0city)=j;
+if(num_zq>1)
+    for i=round(num_zq/2):num_zq
+        num_0city=0;
+        for j=1:m
+            if(nzq(i,j)==0)
+                num_0city=num_0city+1;
+                city0(num_0city)=j;
+            end
         end
-    end
-    aa=0;
-    for j=1:num_0city
-        aa=aa+sum(list_serving_code(city0(j),:));
-    end
-    if(num_0city>0&& aa>0)
-        j=city0(floor(num_0city*rand()+1));
-        while (sum(list_serving_code(j,:))==0)
+        aa=0;
+        for j=1:num_0city
+            aa=aa+sum(list_serving_code(city0(j),:));
+        end
+        if(num_0city>0&& aa>0)
             j=city0(floor(num_0city*rand()+1));
-        end
-        if(nzq(i,j)==0)
-            list_serving_code_t=list_serving_code(j,:);
-            flag_gotn=1;
-            while(flag_gotn)
-                n_cho=floor(n*rand()+1);
-                if(list_serving_code_t(1,n_cho)==1)
-                    nzq(i,j)=n_cho;
-                    flag_gotn=0;
+            while (sum(list_serving_code(j,:))==0)
+                j=city0(floor(num_0city*rand()+1));
+            end
+            if(nzq(i,j)==0)
+                list_serving_code_t=list_serving_code(j,:);
+                flag_gotn=1;
+                while(flag_gotn)
+                    n_cho=floor(n*rand()+1);
+                    if(list_serving_code_t(1,n_cho)==1)
+                        nzq(i,j)=n_cho;
+                        flag_gotn=0;
+                    end
                 end
             end
         end
@@ -336,19 +393,12 @@ father1=baby1;
 father2=baby2;
 %%%cross
 W=ceil(m/10);  
-p=floor(1+rand()*(m-W+1));%% [0-1£©
-flagnum_m=0;
-for i=1:m
-    if(baby1(i)~=0 && baby2(i)~=0 && num_serving_T(i)>1)
-        flagnum_m=flagnum_m+1;
-    end
-end
-if(flagnum_m>-1)
+p=floor(1+rand()*(m-W+1));%% [0-1ï¼‰
 for i=1:W
     x=find(baby1==baby2(1,p+i-1));   
     y=find(baby2==baby1(1,p+i-1));
     max_iter=100;
-    while(isempty(x)||isempty(y)||baby1(1,p+i-1)==0 || baby2(1,p+i-1)==0)
+    while(isempty(x)||isempty(y))
         max_iter=max_iter-1;
         if(max_iter<0)
             break;
@@ -400,10 +450,9 @@ while tmp==tmp2
     tmp2=list_serving_codeold{p2,1}(1,floor(rand(1)*num_serving_T(p2)+1));
 end
 baby2(p2)=tmp2;
-end
 return
 
-%without perms£¬
+%without permsï¼Œ
 function list_bh=bh2list(tarlist_ofc,num_t_ofc,bh_oflist)
 if(num_t_ofc == 1)
     list_bh = tarlist_ofc(1);
@@ -619,7 +668,7 @@ if(flagi)
     flag=1;
     final=final_pre2;
 else
-    len=1e10;
+    len=-1;
     sumt=0;
     sumfuel=0;
     flag=0;
